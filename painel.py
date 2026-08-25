@@ -19,6 +19,7 @@ SCRIPT  = PASTA / "lancar_atendimentos.py"
 PERFIL_JSON = PASTA / "perfil_custom.json"
 RUN_JSON    = PASTA / "painel_run.json"
 TEXTOS_JSON = PASTA / "textos_variados.json"
+PAUSE_FLAG  = PASTA / "pause.flag"
 LOG     = PASTA / "run_painel.log"
 PORTA   = 8760
 
@@ -68,6 +69,7 @@ textarea{min-height:60px;resize:vertical}
 button{border:0;border-radius:8px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer}
 .b-save{background:#475569;color:#fff} .b-test{background:#d97706;color:#fff}
 .b-run{background:#16a34a;color:#fff} .b-stop{background:#dc2626;color:#fff}
+.b-pause{background:#ca8a04;color:#fff} .b-cont{background:#0891b2;color:#fff}
 button:disabled{opacity:.5;cursor:not-allowed}
 #status{font-size:13px;margin-left:auto;align-self:center}
 pre{background:#020617;border:1px solid #334155;border-radius:10px;padding:12px;height:320px;overflow:auto;font-size:12px;line-height:1.45;white-space:pre-wrap;margin:0}
@@ -139,6 +141,8 @@ small{color:#64748b}
     <button class=b-save onclick=salvar()>💾 Salvar perfil</button>
     <button class=b-test onclick="rodar(true)">🧪 Testar (1, não finaliza)</button>
     <button class=b-run onclick="rodar(false)">▶️ Rodar (finaliza)</button>
+    <button class=b-pause onclick=pausar()>⏸️ Pausar</button>
+    <button class=b-cont onclick=continuar()>▶️ Continuar</button>
     <button class=b-stop onclick=parar()>⏹️ Parar</button>
     <span id=status>—</span>
   </div>
@@ -224,11 +228,13 @@ async function rodar(teste){
   $("status").textContent=(await r.json()).msg;
 }
 async function parar(){ $("status").textContent=(await (await fetch("/parar",{method:"POST"})).json()).msg; }
+async function pausar(){ $("status").textContent=(await (await fetch("/pausar",{method:"POST"})).json()).msg; }
+async function continuar(){ $("status").textContent=(await (await fetch("/continuar",{method:"POST"})).json()).msg; }
 async function puxarLog(){
   try{const r=await fetch("/log"); const d=await r.json();
     const pre=$("log"); const perto=pre.scrollTop+pre.clientHeight>=pre.scrollHeight-30;
     pre.textContent=d.log||"(vazio)"; if(perto)pre.scrollTop=pre.scrollHeight;
-    $("status").textContent=d.rodando?"⏳ rodando…":"● parado";
+    $("status").textContent=(d.pausado&&d.rodando)?"⏸️ pausado (termina o cliente atual e espera)":(d.rodando?"⏳ rodando…":"● parado");
   }catch(e){}
 }
 (async()=>{
@@ -303,6 +309,8 @@ def iniciar_run(teste):
     env["ASA_EMBARALHAR"] = "1" if run.get("embaralhar", True) else "0"
     env["ASA_MODO_TESTE"] = "1" if teste else "0"
     env["PYTHONIOENCODING"] = "utf-8"
+    try: PAUSE_FLAG.unlink()          # garante que nao comeca pausado
+    except FileNotFoundError: pass
     LOG.write_text("", encoding="utf-8")
     f = open(LOG, "w", encoding="utf-8")
     _proc = subprocess.Popen([sys.executable, "-u", str(SCRIPT)], env=env,
@@ -315,9 +323,36 @@ def iniciar_run(teste):
 def parar_run():
     global _proc
     if _proc and _proc.poll() is None:
-        _proc.terminate()
+        pid = _proc.pid
+        try:
+            if os.name == "nt":
+                # mata a ARVORE (python + driver do Playwright) — terminate() sozinho
+                # nao encerra os processos filhos no Windows
+                subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)],
+                               capture_output=True)
+            else:
+                _proc.terminate()
+        except Exception:
+            try: _proc.kill()
+            except Exception: pass
+        try: _proc.wait(timeout=5)
+        except Exception: pass
         return "Rodada interrompida."
     return "Nada rodando."
+
+def pausar_run():
+    if _proc and _proc.poll() is None:
+        PAUSE_FLAG.write_text("1", encoding="utf-8")
+        return "⏸️ Pausando após o cliente atual…"
+    return "Nada rodando."
+
+def continuar_run():
+    estava = PAUSE_FLAG.exists()
+    try: PAUSE_FLAG.unlink()
+    except FileNotFoundError: pass
+    if _proc and _proc.poll() is None:
+        return "▶️ Continuando." if estava else "Já estava rodando."
+    return "Pausa liberada (nada rodando — use Rodar para retomar do progresso)."
 
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -336,7 +371,8 @@ class H(BaseHTTPRequestHandler):
         elif p == "/log":
             txt = LOG.read_text(encoding="utf-8", errors="replace") if LOG.exists() else ""
             rodando = bool(_proc and _proc.poll() is None)
-            self._json({"log": txt[-16000:], "rodando": rodando})
+            self._json({"log": txt[-16000:], "rodando": rodando,
+                        "pausado": PAUSE_FLAG.exists()})
         else: self._send(404, "{}")
     def do_POST(self):
         p = self.path.split("?")[0]
@@ -350,6 +386,10 @@ class H(BaseHTTPRequestHandler):
             self._json({"msg": iniciar_run(teste)})
         elif p == "/parar":
             self._json({"msg": parar_run()})
+        elif p == "/pausar":
+            self._json({"msg": pausar_run()})
+        elif p == "/continuar":
+            self._json({"msg": continuar_run()})
         elif p == "/textos":
             try:
                 n = salvar_textos_pool(json.loads(raw))

@@ -316,6 +316,7 @@ def formatar_tel(v):
 
 # -------------------------------------------------------------- PROGRESSO ----
 ARQ_PROG = PASTA / f"progresso_{PERFIL}.json"   # progresso separado por perfil
+PAUSE_FLAG = PASTA / "pause.flag"   # painel cria p/ PAUSAR; remove p/ CONTINUAR
 def carregar_progresso():
     if ARQ_PROG.exists():
         return json.loads(ARQ_PROG.read_text(encoding="utf-8"))
@@ -785,6 +786,11 @@ def main():
         ctx.add_init_script(PATCH_STANDALONE)
 
         for idx, (cli, ag) in enumerate(zip(clientes, agenda), 1):
+            if PAUSE_FLAG.exists():                 # PAUSA entre clientes (nao perde o atual)
+                print("[PAUSA] rodada pausada — clique em Continuar no painel para retomar.")
+                while PAUSE_FLAG.exists():
+                    time.sleep(1.5)
+                print("[RETOMANDO] seguindo os lancamentos.")
             if cli["cpf"] in prog["feitos"] and not REFAZER:
                 print(f"[{idx}] {cli['cpf']} ja feito, pulando.")
                 continue
