@@ -1,0 +1,46 @@
+# === NUNCA versionar (dados sensíveis / sessões / pesado) ===
+
+# Perfis do Chrome — sessões de login, cookies, credenciais
+perfil-chrome/
+perfil-chrome-2/
+perfil-chrome-3/
+perfil-chrome*/
+
+# Dados pessoais de clientes (CPF, CNPJ, telefone, e-mail)
+*.xlsx
+*.xls
+*.csv
+*.pdf
+
+# Estado de execução / progresso (contém CPFs) e config local
+progresso*.json
+painel_run.json
+perfil_custom.json
+
+# Saídas, logs e prints (podem conter dados pessoais)
+*.log
+debug/
+telas/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+
+# Scripts one-off com CPFs de clientes embutidos — NÃO versionar
+continuar_1.py
+make_dia24.py
+make_restante.py
+
+# Scripts one-off / diagnósticos de lotes antigos (fora do portfólio)
+anexar.py
+check_dia24.py
+detect_cnpj.py
+inspecionar_formulario.py
+make_final.py
+make_me_epp.py
+campos_formulario.json
+campos_formulario.txt

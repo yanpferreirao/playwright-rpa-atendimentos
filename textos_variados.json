@@ -1,0 +1,62 @@
+[
+  {
+    "servico": "Emissão de boletos DAS",
+    "orientacao": "Cliente foi orientado(a) sobre a emissão mensal do boleto DAS (Documento de Arrecadação do Simples Nacional) pelo Portal do Empreendedor, reforçando a importância de manter os pagamentos em dia para preservar os benefícios previdenciários e a regularidade do MEI.",
+    "descricao": "Realizada orientação técnica sobre a emissão e o pagamento do DAS mensal, esclarecendo prazos, o acesso ao Portal do Empreendedor e as consequências da inadimplência para a regularidade do MEI."
+  },
+  {
+    "servico": "Declaração anual de faturamento do SIMEI",
+    "orientacao": "Cliente foi orientado(a) sobre a Declaração Anual do Simples Nacional (DASN-SIMEI), o prazo de entrega até 31 de maio, o correto preenchimento do faturamento bruto do ano anterior e a obrigatoriedade da declaração mesmo sem movimento.",
+    "descricao": "Prestada orientação sobre o preenchimento e a transmissão da Declaração Anual de Faturamento (DASN-SIMEI), reforçando prazos e a importância da entrega para evitar pendências junto à Receita Federal."
+  },
+  {
+    "servico": "Cursos e portfólios do Sebrae",
+    "orientacao": "Cliente foi apresentado(a) ao portfólio de cursos e capacitações do Sebrae, presenciais e on-line, com incentivo à participação nas trilhas de gestão, finanças e vendas para o fortalecimento do seu negócio.",
+    "descricao": "Apresentado o portfólio de cursos e soluções do Sebrae, com recomendação de trilhas de capacitação alinhadas ao perfil e às necessidades do empreendimento do cliente."
+  },
+  {
+    "servico": "Convite para eventos do Sebrae",
+    "orientacao": "Cliente foi convidado(a) a participar dos próximos eventos, feiras e rodadas de negócios promovidos pelo Sebrae — oportunidades para ampliar a rede de contatos, conhecer novos mercados e gerar negócios.",
+    "descricao": "Realizado convite e orientação sobre a agenda de eventos do Sebrae, destacando os benefícios da participação para networking e desenvolvimento do MEI."
+  },
+  {
+    "servico": "Alteração de endereço do MEI",
+    "orientacao": "Cliente foi orientado(a) sobre o procedimento de alteração de endereço do MEI no Portal do Empreendedor, os documentos necessários e a importância de manter os dados cadastrais sempre atualizados.",
+    "descricao": "Prestada orientação técnica sobre a atualização de endereço do MEI, detalhando o passo a passo no Portal do Empreendedor e a relevância da manutenção dos dados cadastrais."
+  },
+  {
+    "servico": "Alteração de Capital social do MEI",
+    "orientacao": "Cliente foi orientado(a) sobre a alteração do capital social do MEI — quando e por que realizá-la — e o procedimento de atualização diretamente no Portal do Empreendedor.",
+    "descricao": "Realizada orientação sobre a alteração de capital social do MEI, esclarecendo o procedimento no Portal do Empreendedor e seus reflexos cadastrais."
+  },
+  {
+    "servico": "Consultorias gratuitas do Sebrae",
+    "orientacao": "Cliente foi orientado(a) sobre as consultorias gratuitas oferecidas pelo Sebrae nas áreas de finanças, marketing, vendas e formalização, com incentivo a agendar atendimento para desenvolver o seu negócio.",
+    "descricao": "Apresentadas as consultorias gratuitas do Sebrae, orientando o cliente sobre as áreas disponíveis e a forma de agendamento para acompanhamento do empreendimento."
+  },
+  {
+    "servico": "Sebraetec (programa 70x30)",
+    "orientacao": "Cliente foi orientado(a) sobre o Sebraetec e suas consultorias especializadas em inovação e tecnologia, estruturadas no programa 70x30, no qual o Sebrae subsidia 70% do valor, cabendo ao empreendedor apenas 30%.",
+    "descricao": "Prestada orientação sobre o programa Sebraetec, detalhando as consultorias especializadas disponíveis e o modelo de subsídio 70x30 para acesso a soluções tecnológicas."
+  },
+  {
+    "servico": "Consulta de CNPJ",
+    "orientacao": "Cliente foi orientado(a) sobre como consultar a situação cadastral do CNPJ na Receita Federal, a leitura do comprovante de inscrição e a importância de manter o cadastro ativo e regular.",
+    "descricao": "Realizada orientação técnica sobre a consulta do CNPJ na Receita Federal, auxiliando na verificação da situação cadastral e na leitura do comprovante de inscrição do MEI."
+  },
+  {
+    "servico": "Parcelamento de boletos DAS do MEI",
+    "orientacao": "Cliente foi orientado(a) sobre o parcelamento dos débitos de DAS em atraso, as opções disponíveis nos portais da Receita Federal e do Simples Nacional e a importância da regularização para manter os benefícios do MEI.",
+    "descricao": "Prestada orientação sobre o parcelamento de DAS em atraso, esclarecendo os canais oficiais, as condições e a importância da regularização para a manutenção do MEI."
+  },
+  {
+    "servico": "Consulta à dívida ativa",
+    "orientacao": "Cliente foi orientado(a) sobre como consultar débitos inscritos em dívida ativa, os canais oficiais de verificação e as formas de negociação e regularização para evitar restrições ao CNPJ.",
+    "descricao": "Realizada orientação sobre a consulta à dívida ativa, indicando os canais de verificação e as alternativas de negociação para regularização das pendências do MEI."
+  },
+  {
+    "servico": "Microcrédito da AFEAM",
+    "orientacao": "Cliente foi orientado(a) sobre as linhas de microcrédito da AFEAM (Agência de Fomento do Estado do Amazonas), voltadas ao MEI e ao pequeno empreendedor, com condições facilitadas para capital de giro e investimento, além dos requisitos e documentos necessários para a solicitação.",
+    "descricao": "Prestada orientação sobre o acesso ao microcrédito da AFEAM, detalhando as linhas disponíveis para o MEI, condições, requisitos e a documentação necessária para a solicitação do crédito."
+  }
+]
