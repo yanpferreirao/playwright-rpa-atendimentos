@@ -1,92 +1,102 @@
-# 🤖 Playwright RPA — Automação de Atendimentos
+# 🤖 Playwright RPA — Bulk Attendance Automation
 
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-RPA-2EAD33?logo=playwright&logoColor=white)
-![Vanilla JS](https://img.shields.io/badge/UI-HTML%2FCSS%2FJS%20puro-F7DF1E?logo=javascript&logoColor=black)
+![Vanilla JS](https://img.shields.io/badge/UI-vanilla%20HTML%2FCSS%2FJS-F7DF1E?logo=javascript&logoColor=black)
 
-Robô (RPA) que **lança atendimentos em massa** em um sistema web corporativo (o
-ASA Externo, PWA do Sebrae-AM) a partir de planilhas — com um **painel web local**
-para configurar e disparar as rodadas. Transforma um trabalho manual e repetitivo
-de **horas em minutos**, mantendo o login e os dados sensíveis sob controle do usuário.
+**🌐 Language:** English · [🇧🇷 Português](README.pt-BR.md)
 
-> Projeto real, usado em produção para dar conta de metas de atendimento.
-> Os dados de clientes (CPF/CNPJ) e as sessões de login **nunca** entram no repositório.
+A **RPA bot** that registers **hundreds of attendance records** into a corporate web
+system (the ASA Externo, a Sebrae-AM PWA) straight from spreadsheets — plus a **local
+web panel** to configure and launch the runs. It turns **hours** of repetitive manual
+data entry into **minutes**, while keeping login and sensitive data under the user's
+control.
+
+> A real project, used in production to hit attendance targets.
+> Client data (national IDs) and login sessions **never** enter the repository.
 
 ---
 
-## 💡 O problema
+## 💡 The problem
 
-Registrar centenas de atendimentos à mão em um sistema web é lento e sujeito a erro:
-cada lançamento exige percorrer um **wizard de 5 etapas** (buscar cliente, vincular/
-cadastrar CNPJ, contatos, endereço, classificação e horário) e o sistema é uma **PWA
-offline-first** com menus virtualizados e calendário travado.
+Registering hundreds of attendances by hand in a web system is slow and error-prone:
+each record means going through a **5-step wizard** (find client, link/register the
+company, contacts, address, classification and time slot) in an **offline-first PWA**
+with virtualized menus and a locked calendar.
 
-## ⚙️ A solução
+## ⚙️ The solution
 
-- **Robô em Python + Playwright** que dirige o próprio app do Chrome de ponta a ponta,
-  preenchendo e finalizando cada atendimento a partir da planilha.
-- **Painel web local** (sem dependências além do Python) para escolher unidade, projeto,
-  tema, textos e os parâmetros da rodada — e acompanhar o **log ao vivo**.
-- **Textos variados** que rotacionam por cliente (cobrindo todos os serviços), para os
-  registros não ficarem repetitivos.
+- A **Python + Playwright bot** that drives the actual Chrome app end to end, filling in
+  and finalizing each attendance from the spreadsheet.
+- A **local web panel** (no dependencies beyond Python) to pick unit, project, theme,
+  texts and run parameters — with a **live log**.
+- **Rotating texts** that vary per client (covering every service topic), so the records
+  don't look repetitive.
 
-## ✨ Destaques técnicos
+## 📊 Results
 
-- **Anexa via CDP ao Chrome já logado** — o login é sempre humano; o robô **nunca**
-  manipula senhas.
-- Contorna o **gate de instalação da PWA** (`matchMedia: display-mode standalone`)
-  injetando patch com `add_init_script`.
-- Lida com **menus Ant Design virtualizados** (rolagem até a opção) e **DatePicker
-  readonly** (navegação por calendário).
-- **Config-driven**: perfis de projeto (`PERFIS`/perfil `CUSTOM`) + variáveis de ambiente;
-  agenda por **datas** ou **horários exatos** (`ASA_SLOTS`), duração, folga e término.
-- **Agenda inteligente**: só dias úteis, respeita janelas livres e o horário comercial.
-- **Idempotência e retomada**: progresso persistido (não repete), detecção de **sessão
-  expirada** com aviso, prints de debug em cada erro.
-- **Painel web em `http.server`** puro (stdlib), com editor de textos e botão *randomizar*.
-- **Privacidade por padrão**: `.gitignore` blinda planilhas, perfis do Chrome, progresso
-  e logs — nada de dado pessoal versionado.
+- **240+ attendances** launched end to end by the bot (80 for one unit + 160 for another).
+- A **120-hour** attendance target met — with the manual work reduced from hours to minutes.
+- **~40 seconds per record**, unattended, versus several minutes each by hand.
+- **Zero passwords handled** by the bot and **zero personal data** committed to the repo.
 
-## 🖥️ Painel de controle
+## ✨ Technical highlights
 
-Uma página local (`http://localhost:8760`) monta a configuração e dispara o script,
-com log em tempo real:
+- **Attaches over CDP to an already-logged-in Chrome** — login is always human; the bot
+  **never** handles passwords.
+- Bypasses the **PWA install gate** (`matchMedia: display-mode standalone`) by injecting a
+  patch with `add_init_script`.
+- Handles **virtualized Ant Design menus** (scroll-to-option) and a **read-only DatePicker**
+  (calendar navigation).
+- **Config-driven**: project profiles (`PERFIS` / `CUSTOM`) + environment variables;
+  schedule by **dates** or **explicit time slots** (`ASA_SLOTS`), with duration/gap/cutoff.
+- **Smart scheduling**: business days only, respects free windows and business hours.
+- **Idempotent & resumable**: persisted progress (no duplicates), **expired-session**
+  detection, debug screenshots on every error.
+- **Web panel on the standard library** (`http.server`), with a text editor and a shuffle
+  button.
+- **Privacy by default**: `.gitignore` shields spreadsheets, Chrome profiles, progress and
+  logs — no personal data is ever versioned.
 
-<!-- screenshot do painel -->
-![Painel](docs/painel.png)
+## 🖥️ Control panel
+
+A local page (`http://localhost:8760`) builds the configuration and launches the bot,
+with a real-time log:
+
+![Control panel](docs/painel.png)
 
 ## 🧱 Stack
 
 `Python 3` · `Playwright` · `openpyxl` · `HTML/CSS/JS` (vanilla) · `http.server` (stdlib)
 
-## 🚀 Como rodar
+## 🚀 Getting started
 
 ```bash
 python -m pip install -r requirements.txt
 python -m playwright install chrome
 ```
 
-1. Abra o sistema no Chrome com porta de depuração e **faça login**.
-2. Rode o painel (duplo clique em `PAINEL.bat`) **ou** direto:
+1. Open the target system in Chrome with a debugging port and **log in**.
+2. Launch the panel (double-click `PAINEL.bat`) **or** run directly:
 
 ```bash
 ASA_PERFIL=UAR ASA_CDP=9224 ASA_PLANILHA=clientes.xlsx python lancar_atendimentos.py
 ```
 
-Guia operacional completo em [`PROCEDIMENTOS.md`](PROCEDIMENTOS.md).
+Full operations guide (PT) in [`PROCEDIMENTOS.md`](PROCEDIMENTOS.md).
 
-## 📁 Estrutura
+## 📁 Structure
 
 ```
-lancar_atendimentos.py   # robô principal (Playwright)
-painel.py / PAINEL.bat   # painel web local de controle
-textos_variados.json     # pool de textos de orientação (rotacionam)
-PROCEDIMENTOS.md         # guia operacional
+lancar_atendimentos.py   # main bot (Playwright)
+painel.py / PAINEL.bat   # local web control panel
+textos_variados.json     # pool of guidance texts (rotate per client)
+PROCEDIMENTOS.md         # operations guide
 requirements.txt
 ```
 
-## 🔒 Privacidade & segurança
+## 🔒 Privacy & security
 
-Planilhas de clientes, perfis do Chrome (sessões de login), progresso e logs ficam
-**fora do repositório** (ver `.gitignore`). O robô nunca digita nem armazena senhas —
-a autenticação é feita manualmente pelo operador na janela do navegador.
+Client spreadsheets, Chrome profiles (login sessions), progress and logs stay **out of the
+repository** (see `.gitignore`). The bot never types or stores passwords — authentication
+is done manually by the operator in the browser window.
