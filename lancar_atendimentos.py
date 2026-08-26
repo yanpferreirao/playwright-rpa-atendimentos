@@ -317,6 +317,14 @@ def formatar_tel(v):
 # -------------------------------------------------------------- PROGRESSO ----
 ARQ_PROG = PASTA / f"progresso_{PERFIL}.json"   # progresso separado por perfil
 PAUSE_FLAG = PASTA / "pause.flag"   # painel cria p/ PAUSAR; remove p/ CONTINUAR
+PROG_RUN = PASTA / "progresso_run.json"   # barra de progresso do painel (por rodada)
+def _prog_run(done, total, atual, status):
+    try:
+        PROG_RUN.write_text(json.dumps(
+            {"done": done, "total": total, "atual": atual, "status": status}),
+            encoding="utf-8")
+    except Exception:
+        pass
 def carregar_progresso():
     if ARQ_PROG.exists():
         return json.loads(ARQ_PROG.read_text(encoding="utf-8"))
@@ -534,24 +542,49 @@ def inferir_genero(nome):
         return "Feminino"
     return "Masculino"
 
+def fechar_popup_cep(page):
+    """Fecha o alerta 'CEP nao encontrado' (botao Entendi/OK), se aparecer.
+    Sem isso o modal bloqueia os proximos campos e o atendimento falha."""
+    for nome in ("Entendi", "OK", "Ok"):
+        try:
+            btn = page.get_by_role("button", name=nome, exact=True)
+            if btn.count() > 0 and btn.first.is_visible():
+                btn.first.click()
+                page.wait_for_timeout(400)
+                return True
+        except Exception:
+            pass
+    return False
+
 def tratar_contatos(page, cli):
-    """Na etapa Contatos & Enderecos: corrige telefone invalido e numero vazio
-    com dados da planilha, e marca 'Mesmo endereco da pessoa fisica'."""
-    # telefone: precisa ter 11 digitos; corrige se estiver invalido/vazio
+    """Na etapa Contatos & Enderecos: garante telefone (11 dig.) e endereco com os
+    dados da planilha, dispensa o alerta de CEP nao encontrado, e marca 'Mesmo
+    endereco da pessoa fisica'."""
+    # telefone: a planilha e a fonte da verdade -> SOBRESCREVE valor invalido/errado
+    # (ex.: o ASA vem pre-preenchido com um numero incorreto como 99999999)
     try:
         tel = page.locator("input#multi_Telefone_0_numero")
         if tel.count() > 0 and cli.get("telefone"):
-            if len(_digitos(tel.input_value() or "")) != 11:
-                tel.click()
-                page.keyboard.press("Control+a"); page.keyboard.press("Delete")
-                tel.press_sequentially(cli["telefone"], delay=25)
-                page.wait_for_timeout(400)
+            if _digitos(tel.input_value() or "") != cli["telefone"]:
+                set_texto(page, "multi_Telefone_0_numero", cli["telefone"])
     except Exception as e:
         print("    aviso telefone:", e)
-    # campos de endereco obrigatorios (bairro, rua, cep, numero, cidade):
-    # preenche da planilha SO os que estiverem vazios (nao sobrescreve auto-fill)
+
+    # CEP primeiro: digita, espera a busca automatica e DISPENSA o popup se o CEP
+    # nao existir (senao o modal trava tudo). Depois preenche rua/bairro na mao.
+    try:
+        cep = page.locator("input#multi_Endereco_0_cep")
+        if cep.count() > 0 and cli.get("cep") and not (cep.input_value() or "").strip():
+            cep.click()
+            cep.press_sequentially(_digitos(cli["cep"]), delay=25)
+            page.wait_for_timeout(1600)
+            fechar_popup_cep(page)
+    except Exception as e:
+        print("    aviso cep:", e)
+
+    # demais campos de endereco: preenche os que ficarem vazios (com CEP nao achado,
+    # rua/bairro nao vem no auto-fill, entao entram da planilha)
     for id_, chave in [
-        ("multi_Endereco_0_cep",          "cep"),
         ("multi_Endereco_0_descEndereco", "rua"),
         ("multi_Endereco_0_numero",       "numero"),
         ("multi_Endereco_0_descBairro",   "bairro"),
@@ -561,13 +594,14 @@ def tratar_contatos(page, cli):
             campo = page.locator(f"input#{id_}")
             if (campo.count() > 0 and cli.get(chave)
                     and not (campo.input_value() or "").strip()):
-                # CEP: digita so os digitos (mascara) e espera a busca automatica
-                valor = _digitos(cli[chave]) if chave == "cep" else str(cli[chave])
                 campo.click()
-                campo.press_sequentially(valor, delay=25)
-                page.wait_for_timeout(1500 if chave == "cep" else 200)
+                campo.press_sequentially(str(cli[chave]), delay=20)
+                page.wait_for_timeout(200)
         except Exception as e:
             print(f"    aviso {chave}:", e)
+
+    fechar_popup_cep(page)   # garantia extra antes de prosseguir
+
     # marca 'Mesmo endereco da pessoa fisica' (copia o endereco p/ o empreendimento)
     cb = page.locator("input#multi_Endereco_1_mesmoEnderecoPF")
     if cb.count() > 0:
@@ -768,6 +802,8 @@ def main():
     print(f"Perfil   : {PERFIL} (atendente {CFG['atendente'][1]}, unidade {CFG['unidade'][1]})")
     print(f"Clientes : {len(clientes)} | MODO_TESTE={MODO_TESTE} | HEADLESS={HEADLESS}")
     print(f"Agenda   : {agenda[0][0]} {agenda[0][1]}  ...  {agenda[-1][0]} {agenda[-1][2]}")
+    total = len(clientes); done = 0
+    _prog_run(0, total, 0, "rodando")
 
     prog = carregar_progresso()
     with sync_playwright() as p:
@@ -793,6 +829,7 @@ def main():
                 print("[RETOMANDO] seguindo os lancamentos.")
             if cli["cpf"] in prog["feitos"] and not REFAZER:
                 print(f"[{idx}] {cli['cpf']} ja feito, pulando.")
+                done += 1; _prog_run(done, total, idx, "rodando")
                 continue
             print(f"[{idx}/{len(clientes)}] CPF {cli['cpf']} -> {ag[0]} {ag[1]}-{ag[2]}")
             try:
@@ -802,10 +839,12 @@ def main():
                         prog["feitos"].append(cli["cpf"])
                     prog["erros"].pop(cli["cpf"], None)
                     salvar_progresso(prog)
+                    done += 1; _prog_run(done, total, idx, "rodando")
             except SessaoExpirada:
                 print("\n*** SESSAO EXPIROU ***  Faca login na janela do Chrome e "
                       "rode o script de novo — ele RETOMA de onde parou "
                       f"({len(prog['feitos'])} ja feitos).")
+                _prog_run(done, total, idx, "sessao")
                 break
             except Exception as e:
                 print(f"    ERRO: {e}")
@@ -813,7 +852,9 @@ def main():
                 prog["erros"][cli["cpf"]] = str(e)
                 salvar_progresso(prog)
                 traceback.print_exc()
+                _prog_run(done, total, idx, "rodando")
 
+        _prog_run(done, total, total, "fim")
         print("\nFim. Feitos:", len(prog["feitos"]), "| Erros:", len(prog["erros"]))
         if CDP_PORT:
             print("(modo CDP: deixei o seu navegador aberto)")

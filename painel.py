@@ -20,8 +20,10 @@ PERFIL_JSON = PASTA / "perfil_custom.json"
 RUN_JSON    = PASTA / "painel_run.json"
 TEXTOS_JSON = PASTA / "textos_variados.json"
 PAUSE_FLAG  = PASTA / "pause.flag"
+PROG_RUN    = PASTA / "progresso_run.json"
 LOG     = PASTA / "run_painel.log"
 PORTA   = 8760
+URL_APP = "https://asa-externo.am.sebrae.com.br/"
 
 # valores padrao (perfil UAR) usados quando ainda nao ha perfil_custom.json
 PADRAO = {
@@ -79,6 +81,9 @@ small{color:#64748b}
 .tx .srv{width:100%;font-weight:600;margin-bottom:6px}
 .tx textarea{margin-top:6px}
 .txrm{background:#7f1d1d;color:#fff;border:0;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;float:right}
+.barwrap{background:#0f172a;border:1px solid #334155;border-radius:8px;height:26px;overflow:hidden;position:relative}
+.barfill{background:linear-gradient(90deg,#15803d,#22c55e);height:100%;width:0;transition:width .4s ease}
+.bartxt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#e2e8f0;text-shadow:0 1px 2px #000}
 </style></head><body>
 <header>🗂️ Painel ASA — comandar lançamentos</header>
 <div class=wrap>
@@ -109,7 +114,8 @@ small{color:#64748b}
   <h2>Parâmetros da rodada</h2>
   <div class=run>
     <div class="fld full"><label>Planilha (.xlsx) — caminho completo</label><input id=planilha placeholder="C:\Users\...\clientes.xlsx"></div>
-    <div class=fld><label>Porta CDP (janela logada)</label><input id=cdp></div>
+    <div class=fld><label>Porta CDP (janela logada)</label><input id=cdp>
+      <button class=b-cont onclick=abrirChrome() style="margin-top:6px">🌐 Abrir Chrome do ASA</button></div>
     <div class=fld><label>Duração (min)</label><input id=duracao oninput=calcCap()></div>
     <div class=fld><label>Folga (min)</label><input id=folga oninput=calcCap()></div>
     <div class=fld><label>Último término (HH:MM)</label><input id=fim oninput=calcCap()></div>
@@ -146,6 +152,11 @@ small{color:#64748b}
     <button class=b-stop onclick=parar()>⏹️ Parar</button>
     <span id=status>—</span>
   </div>
+</div>
+
+<div class=card>
+  <h2>Progresso</h2>
+  <div class=barwrap><div class=barfill id=barfill></div><div class=bartxt id=bartxt>—</div></div>
 </div>
 
 <div class=card><h2>Log da execução</h2><pre id=log>Aguardando…</pre></div>
@@ -230,11 +241,18 @@ async function rodar(teste){
 async function parar(){ $("status").textContent=(await (await fetch("/parar",{method:"POST"})).json()).msg; }
 async function pausar(){ $("status").textContent=(await (await fetch("/pausar",{method:"POST"})).json()).msg; }
 async function continuar(){ $("status").textContent=(await (await fetch("/continuar",{method:"POST"})).json()).msg; }
+async function abrirChrome(){ await salvar(); $("status").textContent=(await (await fetch("/abrir-chrome",{method:"POST"})).json()).msg; }
 async function puxarLog(){
   try{const r=await fetch("/log"); const d=await r.json();
     const pre=$("log"); const perto=pre.scrollTop+pre.clientHeight>=pre.scrollHeight-30;
     pre.textContent=d.log||"(vazio)"; if(perto)pre.scrollTop=pre.scrollHeight;
     $("status").textContent=(d.pausado&&d.rodando)?"⏸️ pausado (termina o cliente atual e espera)":(d.rodando?"⏳ rodando…":"● parado");
+    const pr=d.prog||{};
+    if(pr.total>0){
+      const pct=Math.round(pr.done/pr.total*100);
+      $("barfill").style.width=pct+"%";
+      $("bartxt").textContent=`${pr.done} / ${pr.total} feitos (${pct}%)`+(pr.atual?` · atual: ${pr.atual}`:"")+(pr.status==="fim"?" ✓":"");
+    } else if(pr.status==="iniciando"){ $("barfill").style.width="0"; $("bartxt").textContent="iniciando…"; }
   }catch(e){}
 }
 (async()=>{
@@ -285,6 +303,28 @@ def dias_uteis_br(de_iso, ate_iso):
     return out
 
 
+def achar_chrome():
+    for p in (r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+              r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"):
+        if Path(p).exists():
+            return p
+    return "chrome"   # fallback: espera estar no PATH
+
+def abrir_chrome():
+    run = json.loads(RUN_JSON.read_text(encoding="utf-8")) if RUN_JSON.exists() else dict(PADRAO_RUN)
+    porta = (run.get("cdp") or "9224").strip()
+    if not porta.isdigit():
+        return "Porta CDP inválida — preencha um número (ex.: 9224)."
+    perfil = PASTA / f"perfil-chrome-{porta}"   # 1 perfil por porta (mantém o login)
+    try:
+        subprocess.Popen([achar_chrome(),
+                          f"--user-data-dir={perfil}",
+                          f"--app={URL_APP}",
+                          f"--remote-debugging-port={porta}"])
+        return f"🌐 Chrome aberto na porta {porta}. Faça login no ASA se pedir."
+    except Exception as e:
+        return f"Erro ao abrir o Chrome: {e}"
+
 def iniciar_run(teste):
     global _proc
     if _proc and _proc.poll() is None:
@@ -311,6 +351,8 @@ def iniciar_run(teste):
     env["PYTHONIOENCODING"] = "utf-8"
     try: PAUSE_FLAG.unlink()          # garante que nao comeca pausado
     except FileNotFoundError: pass
+    PROG_RUN.write_text(json.dumps({"done": 0, "total": 0, "atual": 0,
+                                    "status": "iniciando"}), encoding="utf-8")
     LOG.write_text("", encoding="utf-8")
     f = open(LOG, "w", encoding="utf-8")
     _proc = subprocess.Popen([sys.executable, "-u", str(SCRIPT)], env=env,
@@ -371,8 +413,12 @@ class H(BaseHTTPRequestHandler):
         elif p == "/log":
             txt = LOG.read_text(encoding="utf-8", errors="replace") if LOG.exists() else ""
             rodando = bool(_proc and _proc.poll() is None)
+            prog = {}
+            if PROG_RUN.exists():
+                try: prog = json.loads(PROG_RUN.read_text(encoding="utf-8"))
+                except Exception: prog = {}
             self._json({"log": txt[-16000:], "rodando": rodando,
-                        "pausado": PAUSE_FLAG.exists()})
+                        "pausado": PAUSE_FLAG.exists(), "prog": prog})
         else: self._send(404, "{}")
     def do_POST(self):
         p = self.path.split("?")[0]
@@ -390,6 +436,8 @@ class H(BaseHTTPRequestHandler):
             self._json({"msg": pausar_run()})
         elif p == "/continuar":
             self._json({"msg": continuar_run()})
+        elif p == "/abrir-chrome":
+            self._json({"msg": abrir_chrome()})
         elif p == "/textos":
             try:
                 n = salvar_textos_pool(json.loads(raw))
